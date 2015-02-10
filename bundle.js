@@ -33,8 +33,8 @@ var TreeToc=React.createClass({
 	}
 	,findRoot:function() { //this is not good
 		var root=this;
-		while (root._owner && typeof root._owner.props.cur!="undefined") {
-			if (root._owner.props.cur!==0) root=root._owner;
+		while (root._owner && typeof root.props.cur!="undefined") {
+			if (root.props.cur!==0) root=root._owner;
 			else break;
 		}
 		return root;
