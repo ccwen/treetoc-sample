@@ -3,3 +3,11 @@
 .hl {color:red;}
 
 .treetoc .selected {background:highlight}
+.treetoc .childnode {left:15px;position:relative;}
+.treetoc .caption   {cursor:pointer;}
+.treetoc .folderbutton  {cursor: pointer;text-decoration: none}
+.treetoc a.folderbutton:hover {background:silver;border-radius:50%;}
+.treetoc .closed {font-size:75%;}
+.treetoc .opened {font-size:75%;}
+.treetoc .leaf   {font-size:75%;}
+.treetoc .nodelink {font-size:65%;cursor: pointer;}

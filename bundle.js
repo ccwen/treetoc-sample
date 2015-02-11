@@ -10,10 +10,11 @@ var E=React.createElement;
 var TreeToc=React.createClass({
 	propTypes:{
 		data:React.PropTypes.array.isRequired
+		,opts:React.PropTypes.object
 		,cur:React.PropTypes.number.isRequired
 	}
 	,getDefaultProps:function() {
-		return {cur:0};
+		return {cur:0,opts:{}};
 	}
 	,renderItem:function(e,idx){
 		var t=this.props.data[e];
@@ -40,7 +41,9 @@ var TreeToc=React.createClass({
 		return root;
 	}
 	,select:function(e){
-		var n=parseInt(e.target.parentElement.attributes['data-n'].value);
+		var datan=e.target.parentElement.attributes['data-n'];
+		if (!datan) return;
+		var n=parseInt(datan.value);
 		var s=!this.props.data[n].s;
 		if (!e.ctrlKey) this.clearSelected();
 		this.props.data[n].s=s;
@@ -51,28 +54,29 @@ var TreeToc=React.createClass({
 	}
 	,render:function() {
 		var cur=this.props.data[this.props.cur];
-		var opened="",selected="",extra="",children=[];
+		var selected="",extra="",children=[];
 		var folderbutton=null;
 		var depthdeco=renderDepth(cur.d,this.props.opts)
 		if (cur.d==0) extra=" treetoc";
 		if (cur.s) selected=" selected";
 		if (cur.c) { 
 			if (cur.o) {
-				opened=" opened";
 				children=enumChildren(this.props.data,this.props.cur);
-				folderbutton=E("button",{onClick:this.click},"－");
+				folderbutton=E("a",{className:"folderbutton opened",onClick:this.click},"－");
 			}
 			else {
-				folderbutton=E("button",{onClick:this.click},"＋");
-				opened=" closed";
+				folderbutton=E("a",{className:"folderbutton closed",onClick:this.click},"＋");
 			}
 		} else {
-			folderbutton=E("span",{},"　　");
+			folderbutton=E("a",{ className:"leaf", "style":{"visibility":"hidden"} },"　");
 		}
 
-		return E("div",{onClick:this.select,"data-n":this.props.cur,className:"childnode"+opened+extra},
+		var extracomponent=this.props.opts.onNode&& this.props.opts.onNode(cur);
+
+		return E("div",{onClick:this.select,"data-n":this.props.cur,className:"childnode"+extra},
 			   folderbutton,depthdeco,
-			   E("span",{className:selected},cur.t),
+			   E("span",{className:selected+" caption"},cur.t),
+			   extracomponent,
 			   	children.map(this.renderItem));
 	}
 });
@@ -1507,14 +1511,42 @@ var React=require("react");
 var treetoc=require("ksana2015-treetoc");
 var TreeToc=treetoc.component;
 var toc=require("./jwl-toc");
+var createRandomLink=function() {
+	for (var i=0;i<toc.length;i++) {
+		var r=Math.random();
+		if (r>0.5) {
+			toc[i].links=[r.toString().substr(2,5)];
+		}
+		if (r>0.75) {
+			toc[i].links.push((1-r).toString().substr(2,5));
+		}
+	}
+}
 treetoc.buildToc(toc);
+createRandomLink();
+
+var LinkCompononent = React.createClass({displayName: "LinkCompononent",
+	click:function(e) {
+		e.stopPropagation();
+	}
+	,render :function() {
+		return React.createElement("a", {onClick: this.click, className: "nodelink"}, this.props.caption, " ")
+	}
+});
+
+var onNode=function(cur) {
+	if (cur.links) { 
+		return cur.links.map(function(link){return React.createElement(LinkCompononent, {caption: link})});
+	}
+	else return null;
+}
 var maincomponent = React.createClass({displayName: "maincomponent",
   getInitialState:function() {
     return {result:[],tofind:"君子"};
   },
   render: function() {
     return React.createElement("div", null, 
-      React.createElement(TreeToc, {data: toc, opts: {tocstyle:"ganzhi"}})
+      React.createElement(TreeToc, {data: toc, opts: {tocstyle:"ganzhi", onNode:onNode}})
     );
   }
 });
