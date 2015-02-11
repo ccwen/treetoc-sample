@@ -1,4 +1,38 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\index.js":[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\controls.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+
+var Controls=React.createClass({
+	propTypes:{
+		enabled:React.PropTypes.array.isRequired
+		,action:React.PropTypes.func.isRequired
+	}
+	,getDefaultProps:function(){
+		return {enabled:[]};
+	}
+	,enb:function(name) {
+		return this.props.enabled.indexOf(name)===-1;		
+	}
+	,act:function(name) {
+		var that=this;
+		return function(){
+			that.props.action(name);
+		}
+	}
+	,render:function() {
+		return E("div",{},
+			E("button" ,{onClick:this.act("add"),title:"New Node",disabled:this.enb("add")},"＋"),
+			E("button"　,{onClick:this.act("remove"),title:"remove Node",disabled:this.enb("remove")},"－"),
+			E("button" ,{onClick:this.act("moveup"),title:"Move up",disabled:this.enb("moveup")},"⇧"),
+			E("button" ,{onClick:this.act("movedown"),title:"Move down",disabled:this.enb("movedown")},"⇩"),
+			E("button" ,{onClick:this.act("levelup"),title:"level -1",disabled:this.enb("levelup")},"⇠"),
+			E("button" ,{onClick:this.act("leveldown"),title:"level +1",disabled:this.enb("leveldown")},"⇢")
+		);
+	}
+})
+
+module.exports=Controls;
+},{"react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\index.js":[function(require,module,exports){
 /*
    toc data format
    array of { d:depth, o:opened, t:text, n:next_same_level ]
@@ -6,20 +40,193 @@
    only first level can be 0
 */
 var React=require("react");
+var TreeNode=require("./treenode");
+var Controls=require("./controls");
 var E=React.createElement;
+var manipulate=require("./manipulate");
+
+var buildToc = function(toc) {
+	if (!toc || !toc.length) return;  
+	var depths=[];
+ 	var prev=0;
+ 	if (toc.length>1) {
+ 		toc[0].o=true;//opened
+ 	}
+ 	for (var i=0;i<toc.length;i++) delete toc[i].n;
+	for (var i=0;i<toc.length;i++) {
+	    var depth=toc[i].d||toc[i].depth;
+	    if (prev>depth) { //link to prev sibling
+	      if (depths[depth]) toc[depths[depth]].n = i;
+	      for (var j=depth;j<prev;j++) depths[j]=0;
+	    }
+    	depths[depth]=i;
+    	prev=depth;
+	}
+}
+var genToc=function(toc,title) {
+    var out=[{depth:0,text:title||ksana.js.title}];
+    if (toc.texts) for (var i=0;i<toc.texts.length;i++) {
+      out.push({t:toc.texts[i],d:toc.depths[i], voff:toc.vpos[i]});
+    }
+    return out; 
+}
 var TreeToc=React.createClass({
 	propTypes:{
 		data:React.PropTypes.array.isRequired
 		,opts:React.PropTypes.object
+	}
+	,getInitialState:function(){
+		return {editcaption:-1,selected:[],enabled:[]};
+	}
+	,action:function() {
+		var args=Array.prototype.slice.apply(arguments);
+		var act=args.shift();
+		var p1=args[0];
+		var p2=args[1];
+		var firstsel=this.state.selected[0];
+		var toc=this.props.data;
+		var r=false;
+		if (act==="updateall") {
+			this.setState({editcaption:-1});
+		} else if (act==="editcaption") {
+			this.setState({editcaption:parseInt(p1),enabled:[]});
+		} else if (act==="changecaption") {
+			if (!this.state.editcaption===-1) return;
+			this.props.data[this.state.editcaption].t=p1;
+			var enabled=manipulate.enabled(this.state.selected,this.props.data);
+			this.setState({editcaption:-1,enabled:enabled});
+		} else if (act==="select") {
+			var selected=this.state.selected;
+			if (!(this.props.opts.multiselect && p2)) {
+				selected=[];
+			}
+			var n=parseInt(p1);
+			if (n>0) selected.push(n);
+			var enabled=manipulate.enabled(selected,toc);
+			this.setState({selected:selected,editcaption:-1,enabled:enabled});
+		} else if (act==="levelup") r=manipulate.levelup(this.state.selected,toc);
+		else if (act==="leveldown") r=manipulate.leveldown(this.state.selected,toc);
+		else if (act==="moveup") r=manipulate.moveup(firstsel,toc);
+		else if (act==="movedown") r=manipulate.movedown(firstsel,toc);
+		else if (act==="add") r=manipulate.addnode(firstsel,toc);
+		else if (act==="remove") r=manipulate.removenode(firstsel,toc);
+		if (r) {
+			buildToc(toc);
+			var enabled=manipulate.enabled(this.state.selected,this.props.data);
+			this.setState({enabled:enabled});
+		}
+	}
+	,render:function() {
+		var controls=null;
+		if (this.props.opts.editable) controls=E(Controls,{action:this.action,enabled:this.state.enabled});
+		return E("div",{},controls,
+			E(TreeNode,{data:this.props.data,
+				editcaption:this.state.editcaption,
+				selected:this.state.selected,
+				action:this.action,opts:this.props.opts,cur:0}));
+	}
+})
+module.exports={component:TreeToc,genToc:genToc,buildToc:buildToc};
+},{"./controls":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\controls.js","./manipulate":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js","./treenode":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\treenode.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js":[function(require,module,exports){
+var levelup =function(sels,toc) { //move select node and descendants one level up
+	if (!canLevelup(sels,toc))return;
+	var n=sels[0];
+	var cur=toc[n];
+	var next=toc[n+1];
+	cur.d--;
+	if (next && next.d>cur.d) { //has child
+		for (var i=n+1;i<cur.n;i++) {
+			toc[i].d--;
+		}
+	}
+	return true;
+}
+var leveldown =function(sels,toc) {
+	if (!canLeveldown(sels,toc))return; //move select node and descendants one level down
+	var n=sels[0];
+	var cur=toc[n];
+	var next=toc[n+1];
+
+	//force open previous node as it becomes parent of this node
+	var p=prevSibling(n,toc);
+	if (p) toc[p].o=true;
+
+	cur.d++;
+	if (next && next.d>cur.d) { //has child
+		for (var i=n+1;i<cur.n;i++) {
+			toc[i].d++;
+		}
+	}
+	return true;
+}
+var moveup =function(sel,toc) {
+	
+}
+var movedown =function(sel,toc) {
+	
+}
+var add =function(sel,toc) {
+	
+}
+var remove =function(sel,toc) {
+	
+}
+var canAdd=function(sels,toc) {
+}
+var canRemove=function(sels,toc) {
+}
+var canMoveup=function(sels,toc) {
+}
+var canMovedown=function(sels,toc) {
+}
+var canLevelup=function(sels,toc) {
+	if (sels.length==0) return false;
+	var n=sels[0];
+	return (sels.length==1 && toc[n].d>1);
+}
+var prevSibling=function(n,toc) {
+	var p=n-1;
+	var d=toc[n].d;
+	while (p>0) {
+		if (toc[p].d<d) return 0;
+		if (toc[p].d==d) return p;
+		p--;
+	}
+}
+var canLeveldown=function(sels,toc) {
+	if (sels.length==0) return false;
+	var n=sels[0];
+	return (sels.length==1 && prevSibling(n,toc));
+}
+var enabled=function(sels,toc) {
+	var enabled=[];
+	if (canLeveldown(sels,toc)) enabled.push("leveldown");
+	if (canLevelup(sels,toc)) enabled.push("levelup");
+	if (canMoveup(sels,toc)) enabled.push("moveup");
+	if (canMovedown(sels,toc)) enabled.push("movedown");
+	if (canAdd(sels,toc)) enabled.push("add");
+	if (canRemove(sels,toc)) enabled.push("remove");
+	return enabled;
+}
+module.exports={enabled:enabled,levelup:levelup,leveldown:leveldown,moveup:moveup,movedown:movedown,add:add,remove:remove};
+},{}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\treenode.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+var TreeNode=React.createClass({
+	propTypes:{
+		data:React.PropTypes.array.isRequired
+		,opts:React.PropTypes.object
+		,action:React.PropTypes.func.isRequired
+		,selected:React.PropTypes.array
 		,cur:React.PropTypes.number.isRequired
+	}
+	,getInitialState:function() {
+		return {};
 	}
 	,getDefaultProps:function() {
 		return {cur:0,opts:{}};
 	}
-	,renderItem:function(e,idx){
-		var t=this.props.data[e];
-		return E(TreeToc,{key:"k"+idx,cur:e,data:this.props.data,opts:this.props.opts});
-	}
+
 	,click:function(e) {
 		var n=parseInt(e.target.parentElement.attributes['data-n'].value);
 		this.props.data[n].o=!this.props.data[n].o;
@@ -27,41 +234,49 @@ var TreeToc=React.createClass({
 		e.preventDefault();
         e.stopPropagation();
 	}
-	,clearSelected:function() {
-		for (var i=0;i<this.props.data.length;i++) {
-			if (this.props.data[i].s) (this.props.data[i].s)=false;
-		}
-	}
-	,findRoot:function() { //this is not good
-		var root=this;
-		while (root._owner && typeof root.props.cur!="undefined") {
-			if (root.props.cur!==0) root=root._owner;
-			else break;
-		}
-		return root;
-	}
 	,select:function(e){
 		var datan=e.target.parentElement.attributes['data-n'];
 		if (!datan) return;
 		var n=parseInt(datan.value);
-		var s=!this.props.data[n].s;
-		if (!e.ctrlKey) this.clearSelected();
-		this.props.data[n].s=s;
-		var root=this.findRoot();
-		root.forceUpdate();
+		var selected=this.props.selected.indexOf(n)>-1;
+		if (selected && this.props.opts.editable) {
+			this.props.action("editcaption",n);
+		} else {
+			this.props.action("select",n,e.ctrlKey);
+		}
 		e.preventDefault();
         e.stopPropagation();
 	}
+	,componentDidUpdate:function() {
+		if (this.refs.editcaption) {
+			var dom=this.refs.editcaption.getDOMNode();
+			dom.focus();
+			dom.selectionStart=dom.value.length;
+		}
+	}
+	,keypress:function(e) {
+		if (e.key=="Enter") {
+			this.props.action("changecaption",e.target.value);	
+		}
+	}
+	,renderItem:function(e,idx){
+		var t=this.props.data[e];
+		return E(TreeNode,{key:"k"+idx,cur:e,
+			editcaption:this.props.editcaption,selected:this.props.selected,
+			action:this.props.action,data:this.props.data,opts:this.props.opts});
+	}
 	,render:function() {
-		var cur=this.props.data[this.props.cur];
+		var n=this.props.cur;
+		var cur=this.props.data[n];
+		var next=this.props.data[n+1];
 		var selected="",extra="",children=[];
 		var folderbutton=null;
 		var depthdeco=renderDepth(cur.d,this.props.opts)
 		if (cur.d==0) extra=" treetoc";
-		if (cur.s) selected=" selected";
-		if (cur.c) { 
+		if (this.props.selected.indexOf(n)>-1) selected=" selected";
+		if (next && next.d>cur.d) { 
 			if (cur.o) {
-				children=enumChildren(this.props.data,this.props.cur);
+				children=enumChildren(this.props.data,n);
 				folderbutton=E("a",{className:"folderbutton opened",onClick:this.click},"－");
 			}
 			else {
@@ -72,14 +287,20 @@ var TreeToc=React.createClass({
 		}
 
 		var extracomponent=this.props.opts.onNode&& this.props.opts.onNode(cur);
+		var caption=E("span",{className:selected+" caption"},cur.t);
+		if (this.props.editcaption===n) {
+			caption=E("input",{onKeyPress:this.keypress,className:"",ref:"editcaption",defaultValue:cur.t});
+			extracomponent=null;
+		}
 
-		return E("div",{onClick:this.select,"data-n":this.props.cur,className:"childnode"+extra},
+		return E("div",{onClick:this.select,"data-n":n,className:"childnode"+extra},
 			   folderbutton,depthdeco,
-			   E("span",{className:selected+" caption"},cur.t),
+			   caption,
 			   extracomponent,
 			   	children.map(this.renderItem));
 	}
 });
+
 var ganzhi="　甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥";
 
 var renderDepth=function(depth,opts) {
@@ -92,43 +313,7 @@ var renderDepth=function(depth,opts) {
   }
   return null;
 };
-var buildToc = function(toc) {
-	if (!toc || !toc.length) return;  
-	var depths=[];
- 	var prev=0;
- 	if (toc.length>1) {
- 		toc[0].c=true;
- 		toc[0].o=true;//opened
- 	}
-	for (var i=0;i<toc.length;i++) {
-	    var depth=toc[i].d||toc[i].depth;
-	    if (prev>depth) { //link to prev sibling
-	      if (depths[depth]) toc[depths[depth]].n = i;
-	      for (var j=depth;j<prev;j++) depths[j]=0;
-	    }
-	    if (i<toc.length-1 && (toc[i+1].d||toc[i+1].depth)>depth) {
-	      toc[i].c=true;
-	    }
-    	depths[depth]=i;
-    	prev=depth;
-	}
-}
-var enumAncestors=function(toc,cur) {
-    if (!toc || !toc.length) return;
-    if (cur==0) return [];
-    var n=cur-1;
-    var depth=toc[cur].d||toc[cur].depth - 1;
-    var parents=[];
-    while (n>=0 && depth>0) {
-      if (toc[n].d||toc[n].depth==depth) {
-        parents.unshift(n);
-        depth--;
-      }
-      n--;
-    }
-    parents.unshift(0); //first ancestor is root node
-    return parents;
-}
+
 
 var enumChildren=function(toc,cur) {
     var children=[];
@@ -155,14 +340,7 @@ var enumChildren=function(toc,cur) {
     }
     return children;
 }
-var genToc=function(toc,title) {
-    var out=[{depth:0,text:title||ksana.js.title}];
-    if (toc.texts) for (var i=0;i<toc.texts.length;i++) {
-      out.push({t:toc.texts[i],d:toc.depths[i], voff:toc.vpos[i]});
-    }
-    return out; 
-}
-module.exports={component:TreeToc,genToc:genToc,enumChildren:enumChildren,enumAncestors:enumAncestors,buildToc:buildToc};
+module.exports=TreeNode;
 },{"react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-webruntime\\checkbrowser.js":[function(require,module,exports){
 /*
 convert to pure js
@@ -1554,7 +1732,7 @@ var maincomponent = React.createClass({displayName: "maincomponent",
   ,render: function() {
     return React.createElement("div", null, 
     React.createElement("button", {onClick: this.expandAll}, "打開全部"), React.createElement("button", {onClick: this.closeAll}, "關閉全部"), 
-      React.createElement(TreeToc, {data: toc, opts: {tocstyle:"ganzhi", onNode:onNode}})
+      React.createElement(TreeToc, {data: toc, opts: {multiselect:true,editable:true,tocstyle:"ganzhi", onNode:onNode}})
     );
   }
 });

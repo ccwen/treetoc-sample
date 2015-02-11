@@ -45,7 +45,7 @@ var maincomponent = React.createClass({
   ,render: function() {
     return <div>
     <button onClick={this.expandAll}>打開全部</button><button onClick={this.closeAll}>關閉全部</button>
-      <TreeToc data={toc} opts={{tocstyle:"ganzhi", onNode:onNode}}/>
+      <TreeToc data={toc} opts={{multiselect:true,editable:true,tocstyle:"ganzhi", onNode:onNode}}/>
     </div>;
   }
 });

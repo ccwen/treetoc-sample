@@ -11,3 +11,4 @@
 .treetoc .opened {font-size:75%;}
 .treetoc .leaf   {font-size:75%;}
 .treetoc .nodelink {font-size:65%;cursor: pointer;}
+button:disabled {color:silver;}
