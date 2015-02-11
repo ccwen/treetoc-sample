@@ -2,7 +2,7 @@
 #main {font-size:200%;}
 .hl {color:red;}
 
-.treetoc .selected {background:highlight}
+.treetoc .selected {background:highlight;border-radius: 5px}
 .treetoc .childnode {left:15px;position:relative;}
 .treetoc .caption   {cursor:pointer;}
 .treetoc .folderbutton  {cursor: pointer;text-decoration: none}
