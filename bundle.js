@@ -1524,19 +1524,18 @@ var createRandomLink=function() {
 }
 treetoc.buildToc(toc);
 createRandomLink();
-
 var LinkCompononent = React.createClass({displayName: "LinkCompononent",
 	click:function(e) {
 		e.stopPropagation();
 	}
 	,render :function() {
-		return React.createElement("a", {onClick: this.click, className: "nodelink"}, this.props.caption, " ")
+		return React.createElement("a", {onClick: this.click, key: "k"+this.props.key, className: "nodelink"}, this.props.caption, " ")
 	}
 });
 
 var onNode=function(cur) {
 	if (cur.links) { 
-		return cur.links.map(function(link){return React.createElement(LinkCompononent, {caption: link})});
+		return cur.links.map(function(link,idx){return React.createElement(LinkCompononent, {caption: link, key: idx})});
 	}
 	else return null;
 }
@@ -1544,8 +1543,17 @@ var maincomponent = React.createClass({displayName: "maincomponent",
   getInitialState:function() {
     return {result:[],tofind:"君子"};
   },
-  render: function() {
+  expandAll:function(){
+	for (var i=0;i<toc.length;i++) toc[i].o=true;
+	this.forceUpdate();
+  }
+  ,closeAll:function(){
+	for (var i=0;i<toc.length;i++) toc[i].o=false;
+	this.forceUpdate();
+  }
+  ,render: function() {
     return React.createElement("div", null, 
+    React.createElement("button", {onClick: this.expandAll}, "打開全部"), React.createElement("button", {onClick: this.closeAll}, "關閉全部"), 
       React.createElement(TreeToc, {data: toc, opts: {tocstyle:"ganzhi", onNode:onNode}})
     );
   }

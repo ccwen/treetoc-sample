@@ -15,19 +15,18 @@ var createRandomLink=function() {
 }
 treetoc.buildToc(toc);
 createRandomLink();
-
 var LinkCompononent = React.createClass({
 	click:function(e) {
 		e.stopPropagation();
 	}
 	,render :function() {
-		return <a onClick={this.click} className="nodelink">{this.props.caption} </a>
+		return <a onClick={this.click} key={"k"+this.props.key} className="nodelink">{this.props.caption} </a>
 	}
 });
 
 var onNode=function(cur) {
 	if (cur.links) { 
-		return cur.links.map(function(link){return <LinkCompononent caption={link}/>});
+		return cur.links.map(function(link,idx){return <LinkCompononent caption={link} key={idx}/>});
 	}
 	else return null;
 }
@@ -35,8 +34,17 @@ var maincomponent = React.createClass({
   getInitialState:function() {
     return {result:[],tofind:"君子"};
   },
-  render: function() {
+  expandAll:function(){
+	for (var i=0;i<toc.length;i++) toc[i].o=true;
+	this.forceUpdate();
+  }
+  ,closeAll:function(){
+	for (var i=0;i<toc.length;i++) toc[i].o=false;
+	this.forceUpdate();
+  }
+  ,render: function() {
     return <div>
+    <button onClick={this.expandAll}>打開全部</button><button onClick={this.closeAll}>關閉全部</button>
       <TreeToc data={toc} opts={{tocstyle:"ganzhi", onNode:onNode}}/>
     </div>;
   }
