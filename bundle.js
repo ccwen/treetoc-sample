@@ -1,4 +1,40 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\controls.js":[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\addnode.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+var linecount=function(t) {
+	var lcount=0;
+	t.replace(/\n/g,function(){
+		lcount++;
+	})
+	return lcount+2;
+}
+var AddNode=React.createClass({
+	propTypes:{
+		action: React.PropTypes.func.isRequired
+	}
+	,addingkeydown:function(e) {
+		var t=e.target.value;
+		if (e.key=="Enter" && t.charCodeAt(t.length-1)==10) {
+			this.props.action("addnode",t.trim().split("\n"),this.props.insertBefore);
+		}
+		var lc=linecount(t);
+		e.target.rows=lc;
+	}
+	,componentDidMount:function() {
+		this.refs.adding.getDOMNode().focus();
+	}
+	,render:function(){
+		return E("div", {}, 
+			E("textarea",
+				{onKeyDown:this.addingkeydown,ref:"adding"
+				 ,placeholder:"Enter twice to finish adding",defaultValue:""}
+		));
+	}
+
+})
+
+module.exports=AddNode;
+},{"react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\controls.js":[function(require,module,exports){
 var React=require("react");
 var E=React.createElement;
 
@@ -15,13 +51,13 @@ var Controls=React.createClass({
 	}
 	,act:function(name) {
 		var that=this;
-		return function(){
-			that.props.action(name);
+		return function(e){
+			that.props.action(name,e.ctrlKey);
 		}
 	}
 	,render:function() {
-		return E("div",{},
-			E("button" ,{onClick:this.act("addnode"),title:"New Node",disabled:this.enb("addnode")},"＋"),
+		return E("span",{},
+			E("button" ,{onClick:this.act("addingnode"),title:"Create a new node below, press Ctrl to above here."},"＋"),
 			E("button"　,{style:{visibility:"hidden"}}," "),
 			E("button" ,{onClick:this.act("levelup"),title:"level -1",disabled:this.enb("levelup")},"⇠"),
 			E("button" ,{onClick:this.act("leveldown"),title:"level +1",disabled:this.enb("leveldown")},"⇢")
@@ -39,7 +75,6 @@ module.exports=Controls;
 */
 var React=require("react");
 var TreeNode=require("./treenode");
-var Controls=require("./controls");
 var E=React.createElement;
 var manipulate=require("./manipulate");
 
@@ -74,7 +109,7 @@ var TreeToc=React.createClass({
 		,opts:React.PropTypes.object
 	}
 	,getInitialState:function(){
-		return {editcaption:-1,selected:[],enabled:[]};
+		return {editcaption:-1,selected:[]};
 	}
 	,action:function() {
 		var args=Array.prototype.slice.apply(arguments);
@@ -87,7 +122,8 @@ var TreeToc=React.createClass({
 		if (act==="updateall") {
 			this.setState({editcaption:-1,deleting:-1});
 		} else if (act==="editcaption") {
-			this.setState({editcaption:parseInt(p1),enabled:[]});
+			var n=parseInt(p1);
+			this.setState({editcaption:n,selected:[n]});
 		} else if (act==="deleting") {
 			this.setState({deleting:this.state.editcaption});
 		} else if (act==="changecaption") {
@@ -96,8 +132,7 @@ var TreeToc=React.createClass({
 				this.action("deleting");
 			} else {
 				this.props.data[this.state.editcaption].t=p1;
-				var enabled=manipulate.enabled(this.state.selected,this.props.data);
-				this.setState({editcaption:-1,enabled:enabled});
+				this.setState({editcaption:-1});
 			}
 		} else if (act==="select") {
 			var selected=this.state.selected;
@@ -106,32 +141,37 @@ var TreeToc=React.createClass({
 			}
 			var n=parseInt(p1);
 			if (n>0) selected.push(n);
-			var enabled=manipulate.enabled(selected,toc);
-			this.setState({selected:selected,editcaption:-1,enabled:enabled,deleting:-1});
-		} else if (act==="levelup") r=manipulate.levelUp(sels,toc);
+			this.setState({selected:selected,editcaption:-1,deleting:-1,adding:0});
+		} else if (act==="addingnode") {
+			var insertAt=sels[0];
+			if (p1) {
+				insertAt=-insertAt; //ctrl pressed insert before
+			}
+			this.setState({adding:insertAt,editcaption:-1});
+		} else if (act=="addnode") {
+			var n=this.state.selected[0];
+			r=manipulate.addNode(toc,n,p1,p2)
+		}else if (act==="levelup") r=manipulate.levelUp(sels,toc);
 		else if (act==="leveldown") r=manipulate.levelDown(sels,toc);
-		else if (act==="addnode") r=manipulate.addNode(sels,toc);
 		else if (act==="deletenode") r=manipulate.deleteNode(sels,toc);
 		if (r) {
 			buildToc(toc);
-			var enabled=manipulate.enabled(this.state.selected,this.props.data);
-			this.setState({enabled:enabled,editcaption:-1,deleting:-1});
+			this.setState({editcaption:-1,deleting:-1,adding:0});
 			if (act==="deletenode") this.setState({selected:[]});
 		}
 	}
 	,render:function() {
-		var controls=null;
-		if (this.props.opts.editable) controls=E(Controls,{action:this.action,enabled:this.state.enabled});
-		return E("div",{},controls,
+		return E("div",{},
 			E(TreeNode,{data:this.props.data,
 				editcaption:this.state.editcaption,
 				deleting:this.state.deleting,
 				selected:this.state.selected,
+				adding:this.state.adding,
 				action:this.action,opts:this.props.opts,cur:0}));
 	}
 })
 module.exports={component:TreeToc,genToc:genToc,buildToc:buildToc};
-},{"./controls":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\controls.js","./manipulate":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js","./treenode":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\treenode.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js":[function(require,module,exports){
+},{"./manipulate":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js","./treenode":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\treenode.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js":[function(require,module,exports){
 var descendantOf=function(n,toc) { /* returning all descendants */
 	var d=toc[n].d;
 	n++;
@@ -177,8 +217,19 @@ var levelDown =function(sels,toc) {
 	return true;
 }
 
-var addNode =function(sels,toc) {
-	
+var addNode =function(toc,n,newnodes,insertbefore) {
+	var d=toc[n].d;
+	if (!insertbefore) {
+		toc[n].o=true;
+		n++;
+	}
+	var args=[n,0];
+
+	for (var i=0;i<newnodes.length;i++) {
+		args.push({d:d,t:newnodes[i]});
+	}
+	toc.splice.apply(toc,args);
+	return true;
 }
 var deleteNode =function(sels,toc) {
 	if (!canDeleteNode(sels,toc))return; //move select node descendants one level down
@@ -187,13 +238,11 @@ var deleteNode =function(sels,toc) {
 	toc.splice(n,to-n);
 	return true;
 }
-var canAddNode=function(sels,toc) {
 
-}
 var canDeleteNode=function(sels,toc) {
 	if (sels.length==0) return false;
 	var n=sels[0];
-	return (sels.length==1 && toc[n].d>0);	
+	return (sels.length==1 && toc[n].d>0 && toc.length>2);
 }
 var canLevelup=function(sels,toc) {
 	if (sels.length==0) return false;
@@ -218,7 +267,6 @@ var enabled=function(sels,toc) {
 	var enabled=[];
 	if (canLeveldown(sels,toc)) enabled.push("leveldown");
 	if (canLevelup(sels,toc)) enabled.push("levelup");
-	if (canAddNode(sels,toc)) enabled.push("addnode");
 	if (canDeleteNode(sels,toc)) enabled.push("deletenode");
 	return enabled;
 }
@@ -228,6 +276,8 @@ module.exports={enabled:enabled,levelUp:levelUp,levelDown:levelDown,
 var React=require("react");
 var E=React.createElement;
 var manipulate=require("./manipulate");
+var Controls=require("./controls");
+var AddNode=require("./addnode");
 var TreeNode=React.createClass({
 	propTypes:{
 		data:React.PropTypes.array.isRequired
@@ -257,6 +307,7 @@ var TreeNode=React.createClass({
         e.stopPropagation();
 	}
 	,select:function(e){
+		if (e.target.nodeName!=="SPAN") return;
 		var datan=e.target.parentElement.attributes['data-n'];
 		if (!datan) return;
 		var n=parseInt(datan.value);
@@ -276,16 +327,17 @@ var TreeNode=React.createClass({
 			dom.selectionStart=dom.value.length;
 		}
 	}
-	,keypress:function(e) {
+	,oninput:function(e) {
+		var size=e.target.value.length+2;;
+		if (size<5) size=5;
+		e.target.size=size;
+	}
+
+	,editingkeydown:function(e) {
 		if (e.key=="Enter") {
 			this.props.action("changecaption",e.target.value);	
-		}
-	}
-	,renderItem:function(e,idx){
-		var t=this.props.data[e];
-		return E(TreeNode,{key:"k"+idx,cur:e,
-			editcaption:this.props.editcaption,selected:this.props.selected,deleting:this.props.deleting,
-			action:this.props.action,data:this.props.data,opts:this.props.opts});
+			e.stopPropagation();
+		} else this.oninput(e);
 	}
 	,deleteNodes:function() {
 		this.props.action("deletenode");
@@ -302,8 +354,8 @@ var TreeNode=React.createClass({
 		var cur=this.props.data[n];
 		var folderbutton=null;
 		if (next && next.d>cur.d) { 
-			if (cur.o) folderbutton=E("a",{className:"folderbutton opened",onClick:this.click},"－");
-			else       folderbutton=E("a",{className:"folderbutton closed",onClick:this.click},"＋");
+			if (cur.o) folderbutton=E("a",{className:"folderbutton opened",onClick:this.click},"－");//"▼"
+			else       folderbutton=E("a",{className:"folderbutton closed",onClick:this.click},"＋");//"▷"
 		} else {
 			folderbutton=E("a",{ className:"leaf", "style":{"visibility":"hidden"} },"　");
 		}
@@ -317,11 +369,33 @@ var TreeNode=React.createClass({
 		if (this.props.deleting===n) {
 			caption=this.renderDeleteButton(n);
 		} else if (this.props.editcaption===n) {
-			caption=E("input",{onKeyPress:this.keypress,className:"",ref:"editcaption",defaultValue:cur.t});
+			var size=cur.t.length+2;
+			if (size<5) size=5;
+			caption=E("input",{onKeyDown:this.editingkeydown,
+				               size:size,className:"",ref:"editcaption",defaultValue:cur.t});
 		} else {
 			caption=E("span",{className:selected+" caption",title:n},cur.t);
 		}
 		return caption;
+	}
+	,renderAddingNode:function(n,above) {
+		if (this.props.adding===n && n) { 
+			return E(AddNode,{insertBefore:above,action:this.props.action});
+		}
+	}
+	,renderEditControls:function(n) {
+		if (!this.props.opts.editable) return;
+		if (this.props.editcaption===n) {	
+			var enabled=manipulate.enabled([n],this.props.data);
+			return E(Controls,{action:this.props.action,enabled:enabled});
+		} 
+	}
+	,renderItem:function(e,idx){
+		var t=this.props.data[e];
+		return E(TreeNode,{key:"k"+idx,cur:e,
+			editcaption:this.props.editcaption,selected:this.props.selected,
+			deleting:this.props.deleting,adding:this.props.adding,
+			action:this.props.action,data:this.props.data,opts:this.props.opts});
 	}
 	,render:function() {
 		var n=this.props.cur;
@@ -329,19 +403,25 @@ var TreeNode=React.createClass({
 		var extra="",children=[];
 		var depthdeco=renderDepth(cur.d,this.props.opts)
 		if (cur.d==0) extra=" treetoc";
-		
+		var adding_before_controls=this.renderAddingNode(-n,true);
+		var adding_after_controls=this.renderAddingNode(n);
+		var editcontrols=this.renderEditControls(n);
 		var folderbutton=this.renderFolderButton(n);
 		if (cur.o) children=enumChildren(this.props.data,n);
 
 		var extracomponent=this.props.opts.onNode&& this.props.opts.onNode(cur);
 		caption=this.renderCaption(n);
-		if (this.props.editcaption>-1) extracomponent=null;
+		if (this.props.editcaption>-1 || this.props.deleting>-1) extracomponent=null;
+		if (this.props.deleting>-1) editcontrols=null;
 
 		return E("div",{onClick:this.select,"data-n":n,className:"childnode"+extra},
+			   adding_before_controls,
 			   folderbutton,depthdeco,
+			   editcontrols,
 			   caption,
 			   extracomponent,
-			   	children.map(this.renderItem));
+			   adding_after_controls,
+			   children.map(this.renderItem));
 	}
 });
 
@@ -385,7 +465,7 @@ var enumChildren=function(toc,cur) {
     return children;
 }
 module.exports=TreeNode;
-},{"./manipulate":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js","react":"react","velocity-animate/velocity.min.js":"C:\\ksana2015\\node_modules\\velocity-animate\\velocity.min.js","velocity-animate/velocity.ui.js":"C:\\ksana2015\\node_modules\\velocity-animate\\velocity.ui.js"}],"C:\\ksana2015\\node_modules\\ksana2015-webruntime\\checkbrowser.js":[function(require,module,exports){
+},{"./addnode":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\addnode.js","./controls":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\controls.js","./manipulate":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js","react":"react","velocity-animate/velocity.min.js":"C:\\ksana2015\\node_modules\\velocity-animate\\velocity.min.js","velocity-animate/velocity.ui.js":"C:\\ksana2015\\node_modules\\velocity-animate\\velocity.ui.js"}],"C:\\ksana2015\\node_modules\\ksana2015-webruntime\\checkbrowser.js":[function(require,module,exports){
 /*
 convert to pure js
 save -g reactify
